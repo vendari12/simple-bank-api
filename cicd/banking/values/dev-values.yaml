@@ -1,0 +1,11 @@
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "400m"
+  limits:
+    memory: "600Mi"
+    cpu: "450m"
+
+image:
+  tag: latest
+  pullPolicy: Always

@@ -1,0 +1,76 @@
+version: '3'
+
+services:
+
+  cache:
+    hostname: cache
+    image: docker.dragonflydb.io/dragonflydb/dragonfly
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    volumes:
+      - dragonflydata:/data
+    profiles:
+      - dev
+      - test
+
+
+  db:
+    image: postgres:15.0-alpine
+    volumes:
+      - ./store/postgres/pg_data0:/var/lib/postgresql/data
+    container_name: trado-db
+    environment:
+      - POSTGRES_USER=${PG_USER:-postgres}
+      - POSTGRES_PASSWORD=${PG_PASSWORD:-postgresdb}
+      - POSTGRES_DB=banking
+   
+    restart: unless-stopped
+
+
+  test-db:
+    image: postgres:15.0-alpine
+    volumes:
+      - ./store/postgres/pg_data1:/var/lib/postgresql/data
+    container_name: trado-db-test
+    environment:
+      - POSTGRES_USER=${PG_USER:-postgres}
+      - POSTGRES_PASSWORD=${PG_PASSWORD:-postgresdb}
+      - POSTGRES_DB=banking
+    command: -p 5439
+    restart: unless-stopped
+    profiles:
+      - test
+
+
+  banking:
+    container_name: banking-app
+    build:
+      context: banking
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./banking:/src/
+    environment:
+      # set environment variables
+      - CACHE_URL=redis://cache:6379/0
+      - DB_USER=${PG_USER:-tradoweb}
+      - DB_PASSWORD=${PG_PASSWORD:-securePassTrado}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DATABASE=banking
+      - SECRET_KEY=${SECRET_KEY:-QXFQ6HH2MWBTFLKSCSSHP6YPIBU4QBHP}
+      - ENVIRONMENT=development
+    command: honcho start -f ./Procfile.dev
+    depends_on:
+      - cache
+      - db
+    profiles:
+      - dev
+      - test
+
+
+volumes:
+  pg_data0: {}
+  pg_data1: {}
+  dragonflydata:

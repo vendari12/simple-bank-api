@@ -1,0 +1,10 @@
+resources:
+  requests:
+    memory: "600Mi"
+    cpu: "480m"
+  limits:
+    memory: "650Mi"
+    cpu: "500m"
+
+image:
+  pullPolicy: ifNotPresent

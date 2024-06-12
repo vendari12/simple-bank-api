@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: {{ .Values.podAnnotations.kompose.cmd }}
+    kompose.version: {{ .Values.podAnnotations.kompose.version }}
+  labels:
+    io.kompose.service: {{ .Values.appName }}
+  name: {{ .Values.appName }}
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}  # removes old replicasets for deployment rollbacks
+  selector:
+    matchLabels:
+      io.kompose.service: {{ .Values.appName }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml -o prod/v2
+        kompose.version: 1.21.0 (992df58d8)
+      labels:
+        io.kompose.service: {{ .Values.appName }}
+        app: {{ .Values.appName }}
+    spec:
+      containers:
+        - envFrom:
+            - configMapRef:
+                name: configmap
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          name: {{ .Values.appName }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.containerPort }}
+          resources:
+            requests:
+              memory: {{ .Values.resources.requests.memory }}
+              cpu: {{ .Values.resources.requests.cpu }}
+            limits:
+              memory: {{ .Values.resources.limits.memory }}
+              cpu: {{ .Values.resources.limits.cpu }}
+          securityContext: 
+            runAsUser: 1000 
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: false
+            runAsNonRoot: true  
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - name: {{ .Values.appName }}-claim
+              mountPath: /app/
+            - name: oauth-key
+              mountPath: /code/src/assets
+              readOnly: true
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: {{ .Values.appName }}-claim
+          persistentVolumeClaim:
+            claimName: {{ .Values.appName }}-pvc
+        - name: oauth-key
+          secret:
+            secretName: trado-secret
+            items:
+            - key: oauth.pem
+              path: oauth.pem

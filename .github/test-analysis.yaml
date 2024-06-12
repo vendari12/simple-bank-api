@@ -1,0 +1,59 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+name: Trado Backend PR test execution build
+
+on:
+  pull_request:
+    branches: [ "main" ]
+
+permissions: write-all
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+      
+      - uses: Stockopedia/action-get-changed-files@v1
+        id: get_changed
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          ignore: "**/+(.github)" # ignore the github actions folder
+          foldersOnly: true # to only include folders in the output
+          format: csv # either json, csv or newline
+      
+      - name: Test with pytest
+        env:
+          PYPI_URL: pypi.tramatch.com
+          PYPI_PASS: ${{ secrets.PYPI_PASS }}
+          PYPI_USER: ${{ secrets.PYPI_USER }}
+        run: |
+          make test
+
+      # uncomment this workflow to enable notifications of slack channel
+      # notify deployment channel
+      # - uses: 8398a7/action-slack@v3
+      #   with:
+      #     status: custom
+      #     fields: workflow,job,commit,repo,ref,author,took,commit_message  # Added 'commit_message' field
+      #     custom_payload: |
+      #       {
+      #         attachments: [{
+      #           color: '${{ job.status }}' === 'success' ? 'good' : '${{ job.status }}' === 'failure' ? 'danger' : 'warning',
+      #           text: `:rocket: '${{ job.status }}' on commit ${process.env.AS_COMMIT} (${process.env.AS_COMMIT_MESSAGE}) of ${process.env.AS_REPO} Unittest Analysis on PR (development) by ${process.env.AS_AUTHOR}. Job Duration - ${process.env.AS_TOOK}`,
+      #         }]
+      #       }
+      #   env:
+      #     SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }} # required
+      #   if: always() # Pick up events even if the job fails or is canceled.
+
+
+        
