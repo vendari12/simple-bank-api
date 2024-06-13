@@ -6,15 +6,21 @@ import ssl
 from datetime import datetime
 from enum import Enum
 from math import ceil
-from typing import Any, AsyncGenerator, Dict, List, Optional, Self, Type
+from typing import Any, AsyncGenerator, Dict, List, Optional, Self, Type, Tuple
 
+import pytz
 from sqlalchemy import func, inspect, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncAttrs, AsyncSession
 from sqlalchemy.ext.asyncio import async_sessionmaker as sessionmaker
 from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy.orm import (DeclarativeBase, Mapped, declarative_mixin,
-                            declared_attr, mapped_column)
+from sqlalchemy.orm import (
+    DeclarativeBase,
+    Mapped,
+    declarative_mixin,
+    declared_attr,
+    mapped_column,
+)
 
 from .exceptions import DBConfigError, DuplicatedEntryError
 
@@ -483,7 +489,7 @@ class CRUDMixin(object):
             Self: The updated record.
         """
         kwargs.pop("id", None)  # Prevent changing the ID
-        kwargs["updated_at"] = func.now()  # Update the timestamp
+        kwargs["updated_at"] = datetime.now()  # Update the timestamp
 
         for attr, value in kwargs.items():
             if value is not None:
@@ -566,7 +572,23 @@ class BaseModel(CRUDMixin, Base):
     __mapper_args__ = {"always_refresh": True}
 
     id: Mapped[int] = mapped_column(autoincrement=True, primary_key=True, index=True)
-    created_at: Mapped[datetime] = mapped_column(default=datetime.now(datetime.UTC))
+    created_at: Mapped[datetime] = mapped_column(default=datetime.now())
     updated_at: Mapped[datetime] = mapped_column(
-        default=datetime.now(datetime.UTC), onupdate=datetime.now(datetime.UTC)
+        default=datetime.now(), onupdate=datetime.now()
     )
+
+
+def split_name(full_name: str) -> Tuple[str, str]:
+    """
+    Splits a full name into first and last name.
+
+    Args:
+        full_name (str): The full name to split.
+
+    Returns:
+        Tuple[str, str]: The first and last name.
+    """
+    name_parts = full_name.split()
+    if len(name_parts) < 2:
+        return full_name, ""  # Handle case where there is no last name
+    return name_parts[0], " ".join(name_parts[1:])

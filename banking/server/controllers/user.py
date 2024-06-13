@@ -24,7 +24,7 @@ def map_user_auth_claims(
         access_token=handler.create_access_token(
             subject=claims, expires_delta=timedelta(settings.ACCESS_TOKEN_EXPIRY)
         ),
-        access_token=handler.create_refresh_token(
+        refresh_token=handler.create_refresh_token(
             claims, expires_delta=timedelta(settings.REFRESH_TOKEN_EXPRY)
         ),
     )

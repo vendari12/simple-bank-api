@@ -3,21 +3,20 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from decimal import Decimal
 from typing import Dict, Optional, Self, Tuple
+
 from server.utils.cache import (RedisLock, construct_resource_lock_key,
                                 get_redis_client)
 from server.utils.constants import DEFAULT_CASCADE_MODE, SIGNUP_ACCOUNT_TOPUP
 from server.utils.db import BaseModel
+from server.utils.transactions import generate_transaction_code
 from sqlalchemy import (DECIMAL, JSON, UUID, DateTime, Enum, ForeignKey,
                         Integer, String, Text, Uuid)
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy_utils import CurrencyType
-from server.utils.transactions import generate_transaction_code
 
 from .enums import (AccountLevel, AccountType, TransactionStatus,
                     TransactionType)
-
-
 
 
 class Account(BaseModel):
@@ -124,9 +123,9 @@ class Transaction(BaseModel):
     amount: Mapped[Decimal] = mapped_column(DECIMAL(20, 2), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=True)
     account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"))
-    currency: Mapped[CurrencyType]
+    currency: Mapped[str] = mapped_column(CurrencyType)
     account = relationship("Account", back_populates="transactions")
-    metadata: Mapped[Dict] = mapped_column(JSON)
+    extra: Mapped[Dict] = mapped_column(JSON)
     status: Mapped[TransactionStatus] = mapped_column(
         Enum(TransactionStatus), nullable=TransactionStatus.PENDING
     )

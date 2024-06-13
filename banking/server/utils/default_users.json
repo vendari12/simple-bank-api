@@ -3,26 +3,31 @@
         {
           "name": "Arisha Barron",
           "email": "ArishaBarron@example.net",
-          "country": "Germany"
+          "country": "Germany",
+          "state":"Berlin",
+          "zip_code": "10115"
         },
         {
           "name": "Branden Gibson",
           "email": "BrandenGibson@example.net",
           "country": "Poland",
-          "state": "Berlin"
+          "state": "Warsaw",
+          "zip_code": "10115"
         },
         {
 
           "name": "Rhonda Church",
           "email": "RhondaChurch@example.net",
           "country": "Denmark",
-          "state": "Copenhagen"
+          "state": "Copenhagen",
+          "zip_code": "10115"
         },
         {
           "name": "Georgina Hazel",
           "email": "GeorginaHazel@example.net",
           "country": "Iceland",
-          "state": "Reykjavík"
+          "state": "Reykjavík",
+          "zip_code": "10115"
         }
       ]
 }

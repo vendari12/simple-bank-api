@@ -30,11 +30,14 @@ def construct_resource_lock_key(instance: BaseModel) -> str:
 
 def read_redis_password() -> Union[str, None]:
     """Reads redis password from file"""
-    try:
-        with open(_REDIS_CERT_PATH, "r") as f:
-            return f.read()
-    except FileNotFoundError:
-        return None
+    if _REDIS_CERT_PATH:
+        try:
+            with open(_REDIS_CERT_PATH, "r") as f:
+                return f.read()
+        except FileNotFoundError:
+            logging.error(f"Couldn't load redis password from path: {_REDIS_CERT_PATH}")
+            return None
+    return None
 
 
 _REDIS_PASSWORD = read_redis_password()

@@ -39,7 +39,7 @@ app.include_router(router, prefix=settings.API_V2_STR)
 # TODO: Use a regex to validate URL pattern from requests
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex="*",
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

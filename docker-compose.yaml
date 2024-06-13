@@ -1,4 +1,4 @@
-version: '3'
+
 
 services:
 
@@ -18,7 +18,7 @@ services:
   db:
     image: postgres:15.0-alpine
     volumes:
-      - ./store/postgres/pg_data0:/var/lib/postgresql/data
+      - ./postgres/pg_data0:/var/lib/postgresql/data
     container_name: trado-db
     environment:
       - POSTGRES_USER=${PG_USER:-postgres}
@@ -54,14 +54,14 @@ services:
     environment:
       # set environment variables
       - CACHE_URL=redis://cache:6379/0
-      - DB_USER=${PG_USER:-tradoweb}
-      - DB_PASSWORD=${PG_PASSWORD:-securePassTrado}
+      - DB_USER=${PG_USER:-postgres}
+      - DB_PASSWORD=${PG_PASSWORD:-postgresdb}
       - DB_HOST=db
       - DB_PORT=5432
       - DATABASE=banking
-      - SECRET_KEY=${SECRET_KEY:-QXFQ6HH2MWBTFLKSCSSHP6YPIBU4QBHP}
+      - SECRET_KEY=${SECRET_KEY}
       - ENVIRONMENT=development
-    command: honcho start -f ./Procfile.dev
+    command: python manage.py runserver
     depends_on:
       - cache
       - db

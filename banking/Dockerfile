@@ -1,4 +1,4 @@
-FROM python:3.12-slim-buster
+FROM python:3.11-slim-buster
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends build-essential && \
@@ -27,4 +27,4 @@ USER banking
 
 EXPOSE 8000
 
-CMD python manage.py runserver
+CMD ["gunicorn",  "-c",  "./server/gunicorn.conf.py", "manage:app"]

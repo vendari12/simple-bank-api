@@ -1,17 +1,18 @@
 import logging
 from datetime import date, datetime, timedelta
 from typing import List, Optional
-
+from faker import Faker
 import pyotp
 from passlib.hash import bcrypt
 from server.config.settings import get_settings
 from server.utils.constants import DEFAULT_CASCADE_MODE
-from server.utils.db import BaseModel
+from server.utils.db import BaseModel, split_name, IntegrityError
 from sqlalchemy import Enum, ForeignKey, String, Text, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy_utils import EmailType, PhoneNumberType
-
+from server.utils.files import load_template, BASE_PATH
+from .accounts import Account
 from .enums import TokenTypeEnum, UserRole
 
 
@@ -59,15 +60,15 @@ class ContactDetails(BaseModel):
     __tablename__ = "contact_details"
 
     email: Mapped[str] = mapped_column(EmailType, nullable=False, unique=True)
-    phone: Mapped[str] = mapped_column(PhoneNumberType(region="US"), nullable=False)
+    phone: Mapped[str] = mapped_column(PhoneNumberType, nullable=False)
     address: Mapped[str] = mapped_column(Text, nullable=False)
     city: Mapped[str] = mapped_column(String(100), nullable=False)
     state: Mapped[str] = mapped_column(String(100), nullable=False)
     zip_code: Mapped[str] = mapped_column(String(20), nullable=False)
     country: Mapped[str] = mapped_column(String(100), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     is_primary: Mapped[bool] = mapped_column(default=False, index=True)
-    user = relationship("User", back_populates="contact_details", uselist=False)
-    branch = relationship("Branch", back_populates="contact_details", uselist=False)
+    #user = relationship("User", back_populates="contact_details", uselist=False)
 
     def __repr__(self) -> str:
         return f"<ContactDetails(email={self.email}, phone={self.phone})>"
@@ -82,14 +83,12 @@ class User(BaseModel):
     password_hash: Mapped[str]
     date_of_birth: Mapped[str]
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.CUSTOMER)
-    contact_details_id: Mapped[int] = mapped_column(ForeignKey("contact_details.id"))
-    tokens: List[UserToken] = relationship(
-        "UserToken", lazy="dynamic", back_populates="user_id"
+    tokens: Mapped[List[UserToken]] = relationship("UserToken", lazy="dynamic")
+    contact_details: Mapped[List[ContactDetails]] = relationship(
+        "ContactDetails", backref="user", cascade=DEFAULT_CASCADE_MODE
     )
-    contact_details = relationship("ContactDetails", back_populates="user")
-    employee: Mapped["Employee"] = relationship(back_populates="user")
     accounts = relationship(
-        "Account", back_populates="user", cascade=DEFAULT_CASCADE_MODE
+        Account, back_populates="user", cascade=DEFAULT_CASCADE_MODE
     )
     is_deactivated: Mapped[bool] = mapped_column(default=False, index=True)
 
@@ -291,45 +290,67 @@ class User(BaseModel):
 
         Args:
             session (AsyncSession): The database session.
-            count (int): The number of fake users to generate (default is 1000).
-            **kwargs: Additional keyword arguments to customize user attributes.
         """
-        from server.utils.files import BASE_PATH, load_template
-        from sqlalchemy.exc import IntegrityError
+        # Load default users from a JSON file
+        default_users = await load_template(f"{BASE_PATH}/default_users.json")
+        default_password = "Password"  # Default password for all users
+        faker = Faker()
 
-        default_password = "Password"
-        users = load_template(f"{BASE_PATH}/default_users.json")
-        try:
-            users_instances = [
-                User(
-                    firstName=user["name"].split(" ")[0],
-                    lastName=user["name"].split(" ")[1],
-                    email=user["email"],
-                    country=user["country"],
-                    state=user["state"],
+        # Fetch existing users in the database
+        existing_users = await User.get_all(session)
+
+        # Fetch existing user contact details
+        existing_contacts = await session.execute(
+            select(ContactDetails).filter(ContactDetails.user_id.in_(existing_users))
+        )
+        existing_contacts = existing_contacts.scalars().all()
+        existing_emails = {contact.email for contact in existing_contacts}
+
+        # Filter out users that already exist in the database
+        new_users = [
+            user
+            for user in default_users["users"]
+            if user["email"] not in existing_emails
+        ]
+
+        # Prepare user and contact details objects to be added to the database
+        users_to_sync = []
+        for user_data in new_users:
+            try:
+                first_name, last_name = split_name(user_data["name"])
+                user = User(
+                    first_name=first_name,
+                    last_name=last_name,
                     password=default_password,
-                    username=user["name"],
+                    username=user_data["name"],
                 )
-                for user in users["users"]
-            ]
-            session.add_all(users_instances)
-            await session.commit()
-            logging.info(f"Added {len(users_instances)} default users")
-        except IntegrityError as e:
-            logging.error(f"Could'nt save default users due to: {e.detail}")
+                
+                session.add(user)  # Add the user to the session first
+                await session.commit()  # Commit to get the user's ID
+                session.refresh(user)  # Refresh to get the updated user object with ID
+                contact = ContactDetails(
+                    email=user_data["email"],
+                    country=user_data["country"],
+                    state=user_data["state"],  # Use an empty string if no state is provided
+                    user_id=user.id,  # Use the retrieved user ID
+                    phone=faker.phone_number(),
+                    address=faker.address(),
+                    zip_code=user_data["zip_code"]
+                )
+                users_to_sync.append(contact)  # Add contact details to sync list
+            except Exception as e:
+                logging.error(f"Error processing user {user_data['name']}: {e}")
+                continue
 
-
-class Employee(BaseModel):
-    """Represents an employee of the bank."""
-
-    __tablename__ = "employees"
-
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-    position: Mapped[str] = mapped_column(String(255), nullable=False)
-    branch_id: Mapped[int] = mapped_column(ForeignKey("branches.id"))
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-    user: Mapped["User"] = relationship(back_populates="employee")
-    branch = relationship("Branch", back_populates="employees")
-
-    def __repr__(self) -> str:
-        return f"<Employee(name={self.name}, position={self.position})>"
+        # Add new contact details to the session and commit
+        if users_to_sync:
+            try:
+                session.add_all(users_to_sync)
+                await session.commit()
+                logging.info(f"Added {len(users_to_sync)} default users' contact details")
+            except IntegrityError as e:
+                await session.rollback()
+                logging.error(f"Failed to add contact details due to integrity error: {e}")
+            except Exception as e:
+                await session.rollback()
+                logging.error(f"Failed to add contact details due to an unexpected error: {e}")
