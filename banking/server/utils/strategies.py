@@ -1,8 +1,8 @@
 import logging
 from abc import ABC, abstractmethod
 from typing import Dict
+from server.models.accounts import Account, Transaction, TransactionType
 from sqlalchemy.ext.asyncio import AsyncSession
-from server.models.accounts import Account, Transaction
 
 
 class TransactionStrategy(ABC):
@@ -92,7 +92,12 @@ class TransactionStrategy(ABC):
     """Abstract base class for transaction strategies."""
 
     @abstractmethod
-    async def execute(self, transaction: Transaction):
+    async def execute(
+        self,
+        source: Account,
+        transaction: Transaction,
+        destination: Optional[Account] = None,
+    ):
         """Execute the transaction."""
         pass
 

@@ -1,22 +1,23 @@
-import logging
-from abc import ABC, abstractmethod
 from datetime import datetime
 from decimal import Decimal
 from typing import Dict, Optional, Self, Tuple
 
-from server.utils.cache import (RedisLock, construct_resource_lock_key,
-                                get_redis_client)
+from server.utils.cache import construct_resource_lock_key
 from server.utils.constants import DEFAULT_CASCADE_MODE, SIGNUP_ACCOUNT_TOPUP
 from server.utils.db import BaseModel
 from server.utils.transactions import generate_transaction_code
-from sqlalchemy import (DECIMAL, JSON, UUID, DateTime, Enum, ForeignKey,
-                        Integer, String, Text, Uuid)
+from sqlalchemy import DECIMAL, JSON, UUID, Enum, ForeignKey, String, Text, Uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy_utils import CurrencyType
 
-from .enums import (AccountLevel, AccountType, TransactionStatus,
-                    TransactionType)
+from .enums import (
+    AccountLevel,
+    AccountStatus,
+    AccountType,
+    TransactionStatus,
+    TransactionType,
+)
 
 
 class Account(BaseModel):
@@ -31,12 +32,20 @@ class Account(BaseModel):
     balance: Mapped[Decimal] = mapped_column(
         DECIMAL(20, 2), default=Decimal(SIGNUP_ACCOUNT_TOPUP)
     )
-    level: Mapped[AccountLevel] = mapped_column(index=True)
+    level: Mapped[AccountLevel] = mapped_column(
+        Enum(AccountLevel), index=True, default=AccountLevel.BASIC
+    )
     currency: Mapped[str] = mapped_column(CurrencyType, nullable=False)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     user = relationship("User", back_populates="accounts")
     transactions = relationship(
-        "Transaction", back_populates="account", cascade="all, delete-orphan"
+        "Transaction",
+        back_populates="account",
+        cascade="all, delete-orphan",
+        lazy="dynamic",
+    )
+    status: Mapped[AccountStatus] = mapped_column(
+        Enum(AccountStatus), default=AccountStatus.ACTIVE
     )
 
     def __repr__(self) -> str:
@@ -127,7 +136,7 @@ class Transaction(BaseModel):
     account = relationship("Account", back_populates="transactions")
     extra: Mapped[Dict] = mapped_column(JSON)
     status: Mapped[TransactionStatus] = mapped_column(
-        Enum(TransactionStatus), nullable=TransactionStatus.PENDING
+        Enum(TransactionStatus), default=TransactionStatus.PENDING
     )
 
     def __repr__(self) -> str:

@@ -15,5 +15,3 @@ def generate_transaction_code(*fields: str) -> uuid.UUID:
     combined = "-".join(fields)
     hash_obj = hashlib.sha256(combined.encode())
     return uuid.UUID(hash_obj.hexdigest()[:32])
-
-

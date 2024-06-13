@@ -1,8 +1,11 @@
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
 from pycountry import countries
-from pydantic import BaseModel, ConfigDict, EmailStr, SecretStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr, field_validator
 from server.utils.schema import BaseSchema
+
+_INVALID_COUNTRY_ERROR_MESSAGE = ""
 
 
 class LoginUserSchema(BaseSchema):
@@ -59,7 +62,7 @@ class UpdateUserDetailsSchema(BaseSchema):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     date_of_birth: Optional[str] = None
-    
+
     @field_validator("date_of_birth")
     @classmethod
     def validate_date_of_birth(cls, value):
@@ -81,24 +84,8 @@ class UpdateUserDetailsSchema(BaseSchema):
         return value
 
 
-
-class UserSchema(BaseModel):
-    first_name: str
-    last_name: str
-    date_of_birth: str
-    id: int
-    model_config = ConfigDict(from_attributes=True)
-
-    
-class CreateUserContactDetail(BaseSchema):
+class BaseContactDetailsSchema(BaseSchema):
     country: str
-    email: str
-    user_id: int
-    city: str
-    state: str
-    zip_code: str
-    is_primary: bool
-    address: str
 
     @field_validator("country")
     @classmethod
@@ -107,7 +94,40 @@ class CreateUserContactDetail(BaseSchema):
             try:
                 country = countries.search_fuzzy(field)
                 if not country:
-                    raise ValueError("Not a valid country")
+                    raise ValueError(_INVALID_COUNTRY_ERROR_MESSAGE)
             except LookupError:
-                raise ValueError("Not a valid country")
+                raise ValueError(_INVALID_COUNTRY_ERROR_MESSAGE)
         return field
+
+
+class UpdateUserContactDetailSchema(BaseContactDetailsSchema):
+    country: Optional[str] = None
+    email: Optional[EmailStr] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    zip_code: Optional[str] = None
+    is_primary: Optional[bool] = None
+    address: Optional[str] = None
+
+
+class CreateUserContactDetailSchema(BaseContactDetailsSchema):
+    email: str
+    city: str
+    state: str
+    zip_code: str
+    is_primary: bool
+    address: str
+
+
+class UserContactDetailsSchema(CreateUserContactDetailSchema):
+    user_id: int
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UserSchema(BaseModel):
+    first_name: str
+    last_name: str
+    date_of_birth: str
+    contacts: UserContactDetailsSchema
+    id: int
+    model_config = ConfigDict(from_attributes=True)

@@ -1,5 +1,6 @@
 from json import loads
 from pathlib import Path
+
 import aiofiles
 
 BASE_PATH = Path(__file__).parent

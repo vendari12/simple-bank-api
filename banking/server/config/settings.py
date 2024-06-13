@@ -11,8 +11,8 @@ class Settings(BaseSettings):
     APP_NAME: str = "Banking App"
     PAGE_SIZE: int = 20
     SECRET_KEY: str
-    ACCESS_TOKEN_EXPIRY: int = 15 # in minutes
-    REFRESH_TOKEN_EXPRY: int = 3 # in days
+    ACCESS_TOKEN_EXPIRY: int = 15  # in minutes
+    REFRESH_TOKEN_EXPRY: int = 3  # in days
 
     # BACKEND_CORS_ORIGINS is a JSON-formatted list of origins
     # e.g: '["http://localhost", "http://localhost:4200", "http://localhost:3000", \
@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = [
         "http://localhost",
         "http://localhost:4200",
-        "http://localhost:3000"
+        "http://localhost:3000",
     ]
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
@@ -43,3 +43,6 @@ def get_settings() -> Settings:
         return _client
     _client = Settings()
     return _client
+
+
+settings = get_settings()

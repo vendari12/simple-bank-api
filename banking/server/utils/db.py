@@ -6,7 +6,7 @@ import ssl
 from datetime import datetime
 from enum import Enum
 from math import ceil
-from typing import Any, AsyncGenerator, Dict, List, Optional, Self, Type, Tuple
+from typing import Any, AsyncGenerator, Dict, List, Optional, Self, Tuple, Type
 
 import pytz
 from sqlalchemy import func, inspect, select

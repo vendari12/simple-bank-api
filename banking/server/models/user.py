@@ -1,17 +1,19 @@
 import logging
 from datetime import date, datetime, timedelta
 from typing import List, Optional
-from faker import Faker
+
 import pyotp
+from faker import Faker
 from passlib.hash import bcrypt
 from server.config.settings import get_settings
 from server.utils.constants import DEFAULT_CASCADE_MODE
-from server.utils.db import BaseModel, split_name, IntegrityError
+from server.utils.db import BaseModel, IntegrityError, split_name
+from server.utils.files import BASE_PATH, load_template
 from sqlalchemy import Enum, ForeignKey, String, Text, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy_utils import EmailType, PhoneNumberType
-from server.utils.files import load_template, BASE_PATH
+
 from .accounts import Account
 from .enums import TokenTypeEnum, UserRole
 
@@ -68,7 +70,7 @@ class ContactDetails(BaseModel):
     country: Mapped[str] = mapped_column(String(100), nullable=False)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     is_primary: Mapped[bool] = mapped_column(default=False, index=True)
-    #user = relationship("User", back_populates="contact_details", uselist=False)
+    # user = relationship("User", back_populates="contact_details", uselist=False)
 
     def __repr__(self) -> str:
         return f"<ContactDetails(email={self.email}, phone={self.phone})>"
@@ -84,7 +86,7 @@ class User(BaseModel):
     date_of_birth: Mapped[str]
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.CUSTOMER)
     tokens: Mapped[List[UserToken]] = relationship("UserToken", lazy="dynamic")
-    contact_details: Mapped[List[ContactDetails]] = relationship(
+    contacts: Mapped[List[ContactDetails]] = relationship(
         "ContactDetails", backref="user", cascade=DEFAULT_CASCADE_MODE
     )
     accounts = relationship(
@@ -324,18 +326,20 @@ class User(BaseModel):
                     password=default_password,
                     username=user_data["name"],
                 )
-                
+
                 session.add(user)  # Add the user to the session first
                 await session.commit()  # Commit to get the user's ID
                 session.refresh(user)  # Refresh to get the updated user object with ID
                 contact = ContactDetails(
                     email=user_data["email"],
                     country=user_data["country"],
-                    state=user_data["state"],  # Use an empty string if no state is provided
+                    state=user_data[
+                        "state"
+                    ],  # Use an empty string if no state is provided
                     user_id=user.id,  # Use the retrieved user ID
                     phone=faker.phone_number(),
                     address=faker.address(),
-                    zip_code=user_data["zip_code"]
+                    zip_code=user_data["zip_code"],
                 )
                 users_to_sync.append(contact)  # Add contact details to sync list
             except Exception as e:
@@ -347,10 +351,16 @@ class User(BaseModel):
             try:
                 session.add_all(users_to_sync)
                 await session.commit()
-                logging.info(f"Added {len(users_to_sync)} default users' contact details")
+                logging.info(
+                    f"Added {len(users_to_sync)} default users' contact details"
+                )
             except IntegrityError as e:
                 await session.rollback()
-                logging.error(f"Failed to add contact details due to integrity error: {e}")
+                logging.error(
+                    f"Failed to add contact details due to integrity error: {e}"
+                )
             except Exception as e:
                 await session.rollback()
-                logging.error(f"Failed to add contact details due to an unexpected error: {e}")
+                logging.error(
+                    f"Failed to add contact details due to an unexpected error: {e}"
+                )

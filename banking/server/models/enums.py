@@ -53,8 +53,17 @@ class LoanStatus(str, Enum):
     DEFAULTED = "defaulted"
 
 
+class AccountStatus(str, Enum):
+    """Enumeration for the status of a user account."""
+
+    ACTIVE = "active"
+    CLOSED = "closed"
+    ON_HOLD = "on hold"
+
+
 class AccountType(str, Enum):
     """Enumeration for different types of bank accounts."""
+
     CHECKINGS = "checkings"
     SAVINGS = "savings"
     CURRENT = "current"
