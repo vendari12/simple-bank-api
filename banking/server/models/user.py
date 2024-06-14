@@ -70,7 +70,6 @@ class ContactDetails(BaseModel):
     country: Mapped[str] = mapped_column(String(100), nullable=False)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     is_primary: Mapped[bool] = mapped_column(default=False, index=True)
-    # user = relationship("User", back_populates="contact_details", uselist=False)
 
     def __repr__(self) -> str:
         return f"<ContactDetails(email={self.email}, phone={self.phone})>"

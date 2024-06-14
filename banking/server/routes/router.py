@@ -8,5 +8,5 @@ router.include_router(
 )
 router.include_router(user.user, prefix="/users", tags=["User Management"])
 router.include_router(
-    transactions.transactions, prefix="/transactions", tags=["Admin User Management"]
+    transactions.transactions, prefix="/transactions", tags=["Transactions Management"]
 )

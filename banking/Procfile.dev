@@ -1,2 +1,3 @@
 app: python manage.py runserver
-queue: python manage.py run-task-queue
+# uncomment this code if you want to use a proper queue
+#queue: python manage.py run-task-queue

@@ -25,9 +25,7 @@ class Account(BaseModel):
         String(20), unique=True, index=True, nullable=False
     )
     type: Mapped[AccountType] = mapped_column(Enum(AccountType), nullable=False)
-    balance: Mapped[Decimal] = mapped_column(
-        DECIMAL(20, 2), default=Decimal(SIGNUP_ACCOUNT_TOPUP)
-    )
+    balance: Mapped[float] = mapped_column( default=SIGNUP_ACCOUNT_TOPUP)
     level: Mapped[AccountLevel] = mapped_column(
         Enum(AccountLevel), index=True, default=AccountLevel.BASIC
     )
@@ -125,7 +123,7 @@ class Transaction(BaseModel):
     __tablename__ = "transactions"
     code: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), index=True, nullable=False)
     type: Mapped[TransactionType] = mapped_column(Enum(TransactionType), nullable=False)
-    amount: Mapped[Decimal] = mapped_column(DECIMAL(20, 2), nullable=False)
+    amount: Mapped[float] = mapped_column(nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=True)
     account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"))
     currency: Mapped[str] = mapped_column(CurrencyType)

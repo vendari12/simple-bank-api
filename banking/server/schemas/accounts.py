@@ -22,6 +22,8 @@ class UserAccountSchema(BaseModel):
     @field_validator('currency', mode="before")
     @classmethod
     def parse_currency(cls, value):
+        if isinstance(value, str):
+            return value
         return value.name
 
 

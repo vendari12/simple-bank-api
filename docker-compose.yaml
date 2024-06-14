@@ -61,6 +61,7 @@ services:
       - DATABASE=banking
       - SECRET_KEY=${SECRET_KEY}
       - ENVIRONMENT=development
+      - REDIS_HOST=cache
     command: honcho start -f Procfile.dev
     depends_on:
       - cache

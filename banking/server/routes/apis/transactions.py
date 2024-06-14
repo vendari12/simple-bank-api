@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Security
+from fastapi import APIRouter, Depends, Security, BackgroundTasks
 from server.controllers.transactions import (fetch_transaction_by_code,
                                              initiate_transaction,
                                              list_account_transactions)
@@ -25,11 +25,12 @@ async def fetch_transactions(
 
 @transactions.post("/", response_model=TransactionSchema)
 async def create_transaction(
+    background: BackgroundTasks,
     payload: RequestTransactionSchema,
     credentials: JwtAuthorizationCredentials = Security(access_security),
     session: AsyncSession = Depends(get_session),
 ):
-    return await initiate_transaction(payload, credentials["id"], session)
+    return await initiate_transaction(payload, credentials["id"], session, background)
 
 
 @transactions.get(

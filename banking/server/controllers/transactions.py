@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 from typing import Dict, List, Optional
-
+from fastapi import BackgroundTasks
 from server.config.settings import settings
 from server.models.accounts import Account, Transaction, TransactionType
 from server.schemas.transactions import (
@@ -13,7 +13,7 @@ from server.schemas.transactions import (
 )
 from server.utils.db import Page
 from server.utils.exceptions import BadRequest, ObjectNotFound
-from server.utils.queues import enqueue_task
+from server.utils.queues import enqueue_task, QueueManager
 from server.utils.strategies import TransactionFactory
 from server.utils.transactions import generate_transaction_code
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -210,16 +210,23 @@ async def process_transaction_in_background(
 
 
 def schedule_transaction(
-    transaction: Transaction, account: Account, metadata: Dict, session: AsyncSession
+    transaction: Transaction,
+    account: Account,
+    metadata: Dict,
+    session: AsyncSession,
+    queue: BackgroundTasks | QueueManager,
 ):
     """Schedules the transaction to be processed asynchronously."""
     enqueue_task(
-        process_transaction_in_background, transaction, account, metadata, session
+        queue, process_transaction_in_background, transaction, account, metadata, session
     )
 
 
 async def initiate_transaction(
-    payload: RequestTransactionSchema, user: int, session: AsyncSession
+    payload: RequestTransactionSchema,
+    user: int,
+    session: AsyncSession,
+    background: BackgroundTasks = None,
 ) -> TransactionSchema:
     source = await _get_user_account_by_number(
         payload.source_account_number, user, session
@@ -249,5 +256,9 @@ async def initiate_transaction(
     # send to queue for processing
     # ideally we would need to create a new session instance for sqlalchemy
     # for thread safety use
-    schedule_transaction(transaction, source, metadata, session)
+    if background:
+        schedule_transaction(transaction, source, metadata, session, background)
+    else:
+        queue = QueueManager
+        schedule_transaction(transaction, source, metadata, session, queue)
     return TransactionSchema.model_validate(transaction)

@@ -21,7 +21,6 @@ _USER_NOT_FOUND_ERROR_MESSAGE = "User doesn't exist"
 def map_user_auth_claims(
     user: User, handler: JwtAccessBearer
 ) -> LoginUserResponseSchema:
-    settings = get_settings()
     claims = {"username": user.username, "id": user.id}
     return LoginUserResponseSchema(
         access_token=handler.create_access_token(

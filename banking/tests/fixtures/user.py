@@ -16,6 +16,7 @@ SAMPLE_USER_DATA = {
     "last_name":"Doe",
     "username": "Iron Man",
     "date_of_birth": "2000-07-09",
-    "role": UserRole.CUSTOMER
+    "role": UserRole.CUSTOMER,
+    "password": "Password"
     
 }

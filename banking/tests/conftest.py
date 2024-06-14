@@ -8,8 +8,13 @@ from fastapi_jwt import JwtAuthorizationCredentials
 from fastapi_jwt.jwt import JwtAccess, JwtAuthorizationCredentials
 from httpx import AsyncClient
 from manage import app
-from server.models.accounts import (Account, Transaction, TransactionStatus,
-                                    TransactionType)
+from server.models.accounts import (
+    Account,
+    Transaction,
+    TransactionStatus,
+    AccountType,
+    TransactionType,
+)
 from server.models.enums import UserRole
 from server.models.user import ContactDetails, User
 from server.utils.constants import SERVICE_PORT
@@ -82,9 +87,25 @@ async def sample_account(db_session, test_user):
 
 
 @pytest_asyncio.fixture()
-async def sample_account_transaction(db_session, sample_account):
-    transaction = await Account.create(
-        db_session, **{**generate_transaction(), "account_id": sample_account.id}
+async def sample_account_2(db_session, test_user):
+    account = await Account.create(
+        db_session,
+        **{**generate_account_data(type=AccountType.SAVINGS), "user_id": test_user.id},
+    )
+    yield account
+    await account.delete(db_session)
+
+
+@pytest_asyncio.fixture()
+async def sample_account_transaction(db_session, sample_account, sample_account_2):
+    transaction = await Transaction.create(
+        db_session,
+        **{
+            **generate_transaction(
+                sample_account.id, TransactionType.TRANSFER, sample_account_2.number
+            ),
+
+        },
     )
     yield transaction
     await transaction.delete(db_session)

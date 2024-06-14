@@ -98,7 +98,7 @@ class RedisLock:
         self.key = key
         self.lock_timeout = lock_timeout
         self.lock_value = str(
-            datetime.now(datetime.UTC).timestamp()
+            datetime.now().timestamp()
         )  # Unique value for this lock
 
     async def acquire(self) -> bool:

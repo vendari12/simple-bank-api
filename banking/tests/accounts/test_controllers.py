@@ -1,120 +1,118 @@
 from decimal import Decimal
-from unittest.mock import AsyncMock, patch
-
+from unittest.mock import AsyncMock, patch, Mock
+from server.utils.constants import USER_MAX_ACCOUNT_LIMIT
 import pytest
-from server.controllers.accounts import (_get_user_account_by_number,
-                                         _list_user_accounts,
-                                         create_user_account,
-                                         fetch_account_details_by_number,
-                                         get_user_accounts)
-from server.models.accounts import Account
-from server.schemas.accounts import (ListUserAccountSchema, OpenAccountSchema,
-                                     QueryAccountFilter, UserAccountSchema)
+from server.controllers.accounts import (
+    _get_user_account_by_number,
+    _list_user_accounts,
+    create_user_account,
+    fetch_user_account_details_by_number,
+    get_user_accounts,
+)
+from server.models.accounts import Account, SIGNUP_ACCOUNT_TOPUP
+from server.models.enums import AccountLevel, AccountStatus, AccountType
+from server.utils.db import BaseModel
+from server.schemas.accounts import (
+    ListUserAccountSchema,
+    OpenAccountSchema,
+    QueryAccountFilter,
+    UserAccountSchema,
+)
 from server.utils.exceptions import BadRequest, ObjectNotFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @pytest.mark.asyncio
-async def test_get_user_account_by_number_success(setup_data):
-    session, account, _ = setup_data
-    session.get_one_by_multiple.return_value = account
+async def test_get_user_account_by_number_success(
+    db_session, sample_account, test_user
+):
+    result = await _get_user_account_by_number(
+        sample_account.number, test_user.id, db_session
+    )
+    assert result == sample_account
 
-    result = await _get_user_account_by_number("123456", 1, session)
-    
-    assert result == account
-    session.get_one_by_multiple.assert_awaited_once_with(session, **{"number": "123456", "user_id": 1})
-
-@pytest.mark.asyncio
-async def test_get_user_account_by_number_not_found(setup_data):
-    session, _, _ = setup_data
-    session.get_one_by_multiple.return_value = None
-
-    with pytest.raises(ObjectNotFound, match="No account with number: 123456 found for this user"):
-        await _get_user_account_by_number("123456", 1, session)
 
 @pytest.mark.asyncio
-async def test_list_user_accounts_success(setup_data):
-    session, account, account_list = setup_data
-    session.get_all_by_multiple.return_value = account_list
+async def test_get_user_account_by_number_not_found(db_session, test_user):
 
-    result = await _list_user_accounts(1, session)
-    
-    assert result == account_list
-    session.get_all_by_multiple.assert_awaited_once_with(session, user_id=1)
+    with pytest.raises(
+        ObjectNotFound, match="No account with number: 123456 found for this user"
+    ):
+        await _get_user_account_by_number("123456", test_user.id, db_session)
+
 
 @pytest.mark.asyncio
-async def test_list_user_accounts_empty(setup_data):
-    session, _, _ = setup_data
-    session.get_all_by_multiple.return_value = []
+async def test_list_user_accounts_success(db_session, test_user, sample_account):
+    result = await _list_user_accounts(test_user.id, db_session)
+    assert len(result) == 1
+    assert result[0] == sample_account
 
-    result = await _list_user_accounts(1, session)
-    
+
+@pytest.mark.asyncio
+async def test_list_user_accounts_empty(db_session, test_user):
+    result = await _list_user_accounts(test_user.id, db_session)
     assert result == []
-    session.get_all_by_multiple.assert_awaited_once_with(session, user_id=1)
 
+
+@pytest.mark.parametrize(
+    "status,type,level,expected",
+    [
+        (AccountStatus.ACTIVE, AccountType.CHECKINGS, AccountLevel.BASIC, 1),
+        (AccountStatus.CLOSED, AccountType.CHECKINGS, AccountLevel.BASIC, 0),
+    ],
+)
 @pytest.mark.asyncio
-async def test_get_user_accounts_success(setup_data):
-    session, account, account_list = setup_data
-    session.get_all_by_multiple.return_value = account_list
-    filters = QueryAccountFilter()
+async def test_get_user_accounts_with_filter_success(
+    db_session, test_user, sample_account, status, type, level, expected
+):
+    filters = QueryAccountFilter(status=status, level=level, type=type)
 
-    result = await get_user_accounts(1, filters, session)
-    
-    assert len(result.accounts) == 1
+    result = await get_user_accounts(test_user.id, filters, db_session)
+
+    assert len(result.accounts) == expected
     assert isinstance(result, ListUserAccountSchema)
-    session.get_all_by_multiple.assert_awaited_once_with(session, user_id=1)
+
 
 @pytest.mark.asyncio
-async def test_get_user_accounts_empty(setup_data):
-    session, _, _ = setup_data
-    session.get_all_by_multiple.return_value = []
-    filters = QueryAccountFilter()
-
-    result = await get_user_accounts(1, filters, session)
-    
-    assert len(result.accounts) == 0
-    session.get_all_by_multiple.assert_awaited_once_with(session, user_id=1)
-
-@pytest.mark.asyncio
-@patch('my_module.generate_user_account_number', return_value='789012')  # Replace 'my_module' with the actual module name
-async def test_create_user_account_success(mock_generate, setup_data):
-    session, account, account_list = setup_data
-    session.get_all_by_multiple.return_value = []
-    session.create.return_value = account
-    payload = OpenAccountSchema(account_type="checking", initial_deposit=Decimal('100.00'))
-
-    result = await create_user_account(1, payload, session)
-    
-    assert result.number == '789012'
+async def test_create_user_account_success(
+    mocker,
+    db_session,
+    test_user,
+):
+    payload = OpenAccountSchema(
+        type=AccountType.CHECKINGS, currency="USD", level=AccountLevel.BASIC
+    )
+    result = await create_user_account(test_user.id, payload, db_session)
+    assert result.number != None
     assert isinstance(result, UserAccountSchema)
-    session.create.assert_awaited_once()
-    session.get_all_by_multiple.assert_awaited_once_with(session, user_id=1)
+    assert result.balance == SIGNUP_ACCOUNT_TOPUP and result.currency == "USD"
+    assert result.type == AccountType.CHECKINGS and result.level == AccountLevel.BASIC
+
 
 @pytest.mark.asyncio
-async def test_create_user_account_exceed_limit(setup_data):
-    session, _, account_list = setup_data
-    session.get_all_by_multiple.return_value = [Mock()] * USER_MAX_ACCOUNT_LIMIT  # Mock user having max accounts
+async def test_create_user_account_exceed_limit(mocker, test_user, db_session):
+    mock_get_all_by_multiple = mocker.patch.object(BaseModel, "get_all_by_multiple")
+    mock_get_all_by_multiple.return_value = [
+        Mock()
+    ] * USER_MAX_ACCOUNT_LIMIT  # Mock user having max accounts
 
-    payload = OpenAccountSchema(account_type="checking", initial_deposit=Decimal('100.00'))
+    payload = OpenAccountSchema(
+        type=AccountType.CHECKINGS, currency="USD", level=AccountLevel.BASIC
+    )
 
-    with pytest.raises(BadRequest, match="You have exceeded the maximum number of accounts you can create"):
-        await create_user_account(1, payload, session)
+    with pytest.raises(
+        BadRequest,
+        match="You have exceeded the maximum number of accounts you can create",
+    ):
+        await create_user_account(test_user.id, payload, db_session)
+
 
 @pytest.mark.asyncio
-async def test_fetch_account_details_by_number_success(setup_data):
-    session, account, _ = setup_data
-    session.get_one_by_multiple.return_value = account
-
-    result = await fetch_account_details_by_number("123456", 1, session)
-    
-    assert result.number == "123456"
+async def test_fetch_account_details_by_number_success(
+    db_session, sample_account, test_user
+):
+    result = await fetch_user_account_details_by_number(
+        sample_account.number, test_user.id, db_session
+    )
+    assert result.number == sample_account.number
     assert isinstance(result, UserAccountSchema)
-    session.get_one_by_multiple.assert_awaited_once_with(session, **{"number": "123456", "user_id": 1})
-
-@pytest.mark.asyncio
-async def test_fetch_account_details_by_number_not_found(setup_data):
-    session, _, _ = setup_data
-    session.get_one_by_multiple.return_value = None
-
-    with pytest.raises(ObjectNotFound, match="No account with number: 123456 found for this user"):
-        await fetch_account_details_by_number("123456", 1, session)

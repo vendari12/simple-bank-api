@@ -12,6 +12,8 @@ def generate_transaction(
         "account_id": account_id,
         "amount": 1000,
         "description": description,
+        "currency": "USD",
+        "type": type,
         "extra": {"description": description, "sender": sender},
-        "code": generate_transaction_code(account_id, type),
+        "code": generate_transaction_code(str(account_id), type),
     }
