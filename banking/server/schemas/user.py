@@ -2,7 +2,8 @@ from datetime import datetime
 from typing import Optional
 
 from pycountry import countries
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr, field_validator
+from pydantic import (BaseModel, ConfigDict, EmailStr, Field, SecretStr,
+                      field_validator)
 from server.utils.schema import BaseSchema
 
 _INVALID_COUNTRY_ERROR_MESSAGE = ""

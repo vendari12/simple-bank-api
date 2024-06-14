@@ -6,18 +6,14 @@ from server.utils.cache import construct_resource_lock_key
 from server.utils.constants import DEFAULT_CASCADE_MODE, SIGNUP_ACCOUNT_TOPUP
 from server.utils.db import BaseModel
 from server.utils.transactions import generate_transaction_code
-from sqlalchemy import DECIMAL, JSON, UUID, Enum, ForeignKey, String, Text, Uuid
+from sqlalchemy import (DECIMAL, JSON, UUID, Enum, ForeignKey, String, Text,
+                        Uuid)
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy_utils import CurrencyType
 
-from .enums import (
-    AccountLevel,
-    AccountStatus,
-    AccountType,
-    TransactionStatus,
-    TransactionType,
-)
+from .enums import (AccountLevel, AccountStatus, AccountType,
+                    TransactionStatus, TransactionType)
 
 
 class Account(BaseModel):

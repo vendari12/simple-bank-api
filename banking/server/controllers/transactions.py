@@ -1,22 +1,25 @@
 import logging
+from datetime import datetime
 from typing import Dict, List, Optional
 
 from server.config.settings import settings
 from server.models.accounts import Account, Transaction, TransactionType
-from server.schemas.transactions import (
-    CreateTransactionSchema,
-    PaginatedTransactionSchema,
-    TransactionSchema,
-    FilterTransactionSchema,
-)
-from server.utils.cache import RedisLock, construct_resource_lock_key, get_redis_client
+from server.schemas.transactions import (CreateTransactionSchema,
+                                         FilterTransactionSchema,
+                                         PaginatedTransactionSchema,
+                                         RequestTransactionSchema,
+                                         TransactionSchema)
+from server.utils.cache import (RedisLock, construct_resource_lock_key,
+                                get_redis_client)
 from server.utils.db import Page
 from server.utils.exceptions import BadRequest, ObjectNotFound
+from server.utils.queues import enqueue_task
 from server.utils.strategies import TransactionFactory
 from server.utils.transactions import generate_transaction_code
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .accounts import _get_user_account_by_number, fetch_account_details_by_number
+from .accounts import (_get_user_account_by_number,
+                       fetch_account_details_by_number)
 
 logger = logging.getLogger(__name__)
 
@@ -174,6 +177,38 @@ async def list_account_transactions(
         previous_page=transactions.prev_page,
     )
 
-    logger.info(f"Page {paginated_transactions.page} of transactions retrieved for account {filters.account_number}")
+    logger.info(
+        f"Page {paginated_transactions.page} of transactions retrieved for account {filters.account_number}"
+    )
 
     return paginated_transactions
+
+
+async def _create_transaction(
+    payload: CreateTransactionSchema, session: AsyncSession
+) -> Transaction:
+    code = generate_transaction_code(
+        payload.account_id, payload.currency, datetime.now().isoformat()
+    )
+    
+
+
+async def process_transaction_in_background(
+    transaction: Transaction,
+    account: Account,
+    metadata: Dict,
+    session: AsyncSession,
+):
+    """Processes a transaction in the background."""
+    strategy = TransactionFactory.create(transaction.type)
+    await strategy.execute(transaction, account, metadata, session)
+
+
+def schedule_transaction(
+    transaction: Transaction, account: Account, metadata: Dict, session: AsyncSession
+):
+    """Schedules the transaction to be processed asynchronously."""
+    task = lambda: process_transaction_in_background(
+        transaction, account, metadata, session
+    )
+    enqueue_task(task)

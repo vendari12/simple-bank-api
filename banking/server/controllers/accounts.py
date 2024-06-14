@@ -2,12 +2,8 @@ import logging
 from typing import Dict, List, Optional
 
 from server.models.accounts import Account
-from server.schemas.accounts import (
-    ListUserAccountSchema,
-    OpenAccountSchema,
-    QueryAccountFilter,
-    UserAccountSchema,
-)
+from server.schemas.accounts import (ListUserAccountSchema, OpenAccountSchema,
+                                     QueryAccountFilter, UserAccountSchema)
 from server.utils.accounts import generate_user_account_number
 from server.utils.constants import USER_MAX_ACCOUNT_LIMIT
 from server.utils.exceptions import BadRequest, ObjectNotFound

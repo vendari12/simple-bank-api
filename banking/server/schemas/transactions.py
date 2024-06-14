@@ -1,13 +1,9 @@
-from typing import List, Optional
+from typing import List, Optional, Dict
+
+from pydantic import ConfigDict
 from server.config.settings import settings
-from pydantic import BaseModel, ConfigDict
 from server.models.enums import TransactionStatus, TransactionType
 from server.utils.schema import BaseSchema
-
-
-class MetaDataSchema(BaseSchema):
-    sender: str
-    bank: str
 
 
 class FilterTransactionSchema(BaseSchema):
@@ -25,18 +21,28 @@ class TransactionSchema(BaseSchema):
     currency: str
     user_id: int
     status: TransactionStatus
-    metadata: MetaDataSchema
+    extra: Dict
 
     model_config = ConfigDict(from_attributes=True)
 
 
-class CreateTransactionSchema(BaseSchema):
+
+class RequestTransactionSchema(BaseSchema):
     amount: float
     destination_account_number: Optional[str] = None
     source_account_number: str
     tax: float
     type: TransactionType
 
+class CreateTransactionSchema(BaseSchema):
+    amount: float
+    account_id: int
+    description: str
+    tax: float
+    type: TransactionType
+    currency: str
+    source: str
+    extra: dict
 
 class PaginatedTransactionSchema(BaseSchema):
     transactions: List[TransactionSchema]

@@ -5,17 +5,14 @@ from fastapi_jwt import JwtAccessBearer
 from pydantic import EmailStr
 from server.config.settings import get_settings
 from server.models.user import ContactDetails, User, UserRole, UserToken
-from server.schemas.user import (
-    CreateUserContactDetailSchema,
-    CreateUserSchema,
-    LoginUserResponseSchema,
-    LoginUserSchema,
-    UpdateUserContactDetailSchema,
-    UpdateUserDetailsSchema,
-    UserContactDetailsSchema,
-    UserSchema,
-)
-from server.utils.exceptions import BadRequest, DuplicatedEntryError, ObjectNotFound
+from server.schemas.user import (CreateUserContactDetailSchema,
+                                 CreateUserSchema, LoginUserResponseSchema,
+                                 LoginUserSchema,
+                                 UpdateUserContactDetailSchema,
+                                 UpdateUserDetailsSchema,
+                                 UserContactDetailsSchema, UserSchema)
+from server.utils.exceptions import (BadRequest, DuplicatedEntryError,
+                                     ObjectNotFound)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 _USER_NOT_FOUND_ERROR_MESSAGE = "User doesn't exist"

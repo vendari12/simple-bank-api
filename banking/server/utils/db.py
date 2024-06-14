@@ -14,13 +14,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncAttrs, AsyncSession
 from sqlalchemy.ext.asyncio import async_sessionmaker as sessionmaker
 from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy.orm import (
-    DeclarativeBase,
-    Mapped,
-    declarative_mixin,
-    declared_attr,
-    mapped_column,
-)
+from sqlalchemy.orm import (DeclarativeBase, Mapped, declarative_mixin,
+                            declared_attr, mapped_column)
 
 from .exceptions import DBConfigError, DuplicatedEntryError
 
