@@ -1,5 +1,5 @@
 from unittest.mock import AsyncMock, patch
-
+import asyncio
 import pytest
 from server.controllers.transactions import (process_transaction_in_background,
                                              schedule_transaction, BadRequest, Account)
@@ -8,7 +8,6 @@ from server.utils.strategies import (CreditTransaction, TransactionFactory,
                                      TransactionStatus, TransactionType,
                                      TransferTransaction,
                                      WithdrawalTransaction)
-
 
 @pytest.mark.asyncio
 @patch("server.utils.cache.RedisLock", AsyncMock())
@@ -32,6 +31,7 @@ async def test_withdrawal_transaction(db_session, sample_account, sample_account
     await strategy.execute(transaction, account, {}, db_session)
 
     account.debit_account.assert_awaited_with(transaction.amount, db_session)
+    assert account.debit_account.call_count == 1
     assert transaction.status == TransactionStatus.COMPLETED
 
 
@@ -55,7 +55,7 @@ async def test_transfer_transaction(db_session, sample_account, sample_account_t
     transaction.type = TransactionType.TRANSFER
     transaction.metadata = {"target_account_number": "target_account"}
     target_account = AsyncMock(spec=Account)
-    target_account.balance = Decimal("100.00")
+    target_account.balance = 1000
     transaction.target_account = target_account
 
     with patch.object(db_session, "get", return_value=target_account):
@@ -77,7 +77,7 @@ def test_transaction_factory():
     assert isinstance(
         TransactionFactory.create(TransactionType.TRANSFER), TransferTransaction
     )
-    with pytest.raises(ValueError):
+    with pytest.raises(BadRequest):
         TransactionFactory.create("UNKNOWN_TYPE")
 
 

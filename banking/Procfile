@@ -1,0 +1,2 @@
+app: gunicorn -c ./server/gunicorn.conf.py manage:app
+queue: python manage.py run-task-queue

@@ -61,7 +61,7 @@ services:
       - DATABASE=banking
       - SECRET_KEY=${SECRET_KEY}
       - ENVIRONMENT=development
-    command: python manage.py runserver
+    command: honcho start -f Procfile.dev
     depends_on:
       - cache
       - db

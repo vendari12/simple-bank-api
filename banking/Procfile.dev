@@ -1,0 +1,2 @@
+app: python manage.py runserver
+queue: python manage.py run-task-queue

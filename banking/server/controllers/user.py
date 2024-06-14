@@ -22,7 +22,7 @@ def map_user_auth_claims(
     user: User, handler: JwtAccessBearer
 ) -> LoginUserResponseSchema:
     settings = get_settings()
-    claims = {"sub": user.username}
+    claims = {"username": user.username, "id": user.id}
     return LoginUserResponseSchema(
         access_token=handler.create_access_token(
             subject=claims, expires_delta=timedelta(settings.ACCESS_TOKEN_EXPIRY)

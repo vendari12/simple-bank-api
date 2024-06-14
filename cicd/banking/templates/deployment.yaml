@@ -57,9 +57,6 @@ spec:
           volumeMounts:
             - name: {{ .Values.appName }}-claim
               mountPath: /app/
-            - name: oauth-key
-              mountPath: /code/src/assets
-              readOnly: true
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
@@ -68,9 +65,3 @@ spec:
         - name: {{ .Values.appName }}-claim
           persistentVolumeClaim:
             claimName: {{ .Values.appName }}-pvc
-        - name: oauth-key
-          secret:
-            secretName: trado-secret
-            items:
-            - key: oauth.pem
-              path: oauth.pem

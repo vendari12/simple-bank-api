@@ -80,7 +80,7 @@ async def get_user_accounts(
         ListUserAccountSchema: A schema containing the user's bank accounts.
     """
     query = filters.model_dump(exclude_none=True, exclude_unset=True)
-    logging.debug(f"Fetching accounts for user {user} with filters: {query}")
+    logging.info(f"Fetching accounts for user {user} with filters: {query}")
 
     accounts = await _list_user_accounts(user, session, query)
 
@@ -129,7 +129,7 @@ async def create_user_account(
     return UserAccountSchema.model_validate(account)
 
 
-async def fetch_account_details_by_number(
+async def fetch_user_account_details_by_number(
     number: str, user: int, session: AsyncSession
 ) -> UserAccountSchema:
     """
@@ -158,3 +158,10 @@ async def fetch_account_details_by_number(
     )
 
     return account_schema
+
+
+async def _get_account_by_number(number:str, session)->Account:
+    account = await Account.get_by_field(number, "number", session)
+    if account:
+        return account
+    raise ObjectNotFound("Account not found")

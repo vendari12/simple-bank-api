@@ -1,29 +1,36 @@
 from typing import List, Optional, Dict
-
-from pydantic import ConfigDict
+from uuid import UUID
+from pydantic import ConfigDict, BaseModel, field_validator
 from server.config.settings import settings
 from server.models.enums import TransactionStatus, TransactionType
 from server.utils.schema import BaseSchema
 
 
 class FilterTransactionSchema(BaseSchema):
-    type: TransactionType
-    status: TransactionStatus
+    type: Optional[TransactionType] =None
+    status: Optional[TransactionStatus] =None
     account_number: str
     page: int = 1
     per_page: int = settings.PAGE_SIZE
 
-class TransactionSchema(BaseSchema):
-    code: str
+class TransactionSchema(BaseModel):
+    code: UUID
     type: TransactionType
     amount: float
     description: str
     currency: str
-    user_id: int
+    account_id: int
     status: TransactionStatus
     extra: Dict
 
     model_config = ConfigDict(from_attributes=True)
+    
+    @field_validator('currency', mode="before")
+    @classmethod
+    def parse_currency(cls, value):
+        if not isinstance(value, str):
+            return value.name
+        return value
 
 
 
@@ -32,16 +39,15 @@ class RequestTransactionSchema(BaseSchema):
     destination_account_number: Optional[str] = None
     source_account_number: str
     tax: float
+    currency: str
     type: TransactionType
 
 class CreateTransactionSchema(BaseSchema):
     amount: float
     account_id: int
     description: str
-    tax: float
     type: TransactionType
     currency: str
-    source: str
     extra: dict
 
 class PaginatedTransactionSchema(BaseSchema):

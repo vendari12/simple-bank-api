@@ -12,7 +12,7 @@ from server.utils.constants import SERVICE_PORT
 from server.utils.db import AsyncSession, async_session, init_models
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
-
+from server.utils.queues import process_tasks
 
 @asynccontextmanager
 async def setup_db(app: FastAPI):
@@ -70,6 +70,13 @@ def load_default_users():
             await User.load_default_users(session)
 
     loop.run_until_complete(get_session())
+    
+
+@cli.command()
+def run_task_queue():
+    loop = asyncio.get_event_loop()
+
+    loop.run_until_complete(process_tasks())
 
 
 if __name__ == "__main__":

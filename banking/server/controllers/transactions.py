@@ -4,13 +4,13 @@ from typing import Dict, List, Optional
 
 from server.config.settings import settings
 from server.models.accounts import Account, Transaction, TransactionType
-from server.schemas.transactions import (CreateTransactionSchema,
-                                         FilterTransactionSchema,
-                                         PaginatedTransactionSchema,
-                                         RequestTransactionSchema,
-                                         TransactionSchema)
-from server.utils.cache import (RedisLock, construct_resource_lock_key,
-                                get_redis_client)
+from server.schemas.transactions import (
+    CreateTransactionSchema,
+    FilterTransactionSchema,
+    PaginatedTransactionSchema,
+    RequestTransactionSchema,
+    TransactionSchema,
+)
 from server.utils.db import Page
 from server.utils.exceptions import BadRequest, ObjectNotFound
 from server.utils.queues import enqueue_task
@@ -18,10 +18,17 @@ from server.utils.strategies import TransactionFactory
 from server.utils.transactions import generate_transaction_code
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .accounts import (_get_user_account_by_number,
-                       fetch_account_details_by_number)
+from .accounts import (
+    _get_user_account_by_number,
+    _get_account_by_number,
+)
 
 logger = logging.getLogger(__name__)
+
+# naive way to handle this
+# in a more roboust way this data should be fetched from a processing house/API if external
+# and would ideally contain more information than this
+_BANK_NAME = "Some Bank"
 
 
 async def process_account_transaction(
@@ -125,9 +132,7 @@ async def _list_account_transactions(
         f"Listing transactions for account_number: {filters.account_number}, user: {user}, page: {filters.page}"
     )
 
-    account = await fetch_account_details_by_number(
-        filters.account_number, user, session
-    )
+    account = await _get_user_account_by_number(filters.account_number, user, session)
     filters_dict = filters.model_dump(
         exclude_unset=True,
         exclude_none=True,
@@ -188,9 +193,12 @@ async def _create_transaction(
     payload: CreateTransactionSchema, session: AsyncSession
 ) -> Transaction:
     code = generate_transaction_code(
-        payload.account_id, payload.currency, datetime.now().isoformat()
+        str(payload.account_id), payload.currency, datetime.now().isoformat()
     )
-    
+    transaction = await Transaction.create(
+        session, **{**payload.model_dump(), "code": code}
+    )
+    return transaction
 
 
 async def process_transaction_in_background(
@@ -212,3 +220,38 @@ def schedule_transaction(
         transaction, account, metadata, session
     )
     enqueue_task(task)
+
+
+async def initiate_transaction(
+    payload: RequestTransactionSchema, user: int, session: AsyncSession
+) -> TransactionSchema:
+    source = await _get_user_account_by_number(
+        payload.source_account_number, user, session
+    )
+    destination_account = None
+    if payload.destination_account_number:
+        destination_account = await _get_account_by_number(
+            payload.destination_account_number, session
+        )
+    metadata = {
+        "sender": payload.source_account_number,
+        "target_account_number": (
+            destination_account.number if destination_account else destination_account
+        ),
+        "bank": _BANK_NAME,
+        "tax": payload.tax
+    }
+    transaction_payload = CreateTransactionSchema(
+        amount=payload.amount + payload.tax,
+        account_id=source.id,
+        description=f"{payload.type} for account {source.number}  {payload.destination_account_number if payload.destination_account_number else 'for CASH'}",
+        type=payload.type,
+        currency=payload.currency,
+        extra=metadata,
+    )
+    transaction = await _create_transaction(transaction_payload, session)
+    # send to queue for processing
+    # ideally we would need to create a new session instance for sqlalchemy
+    # for thread safety use
+    schedule_transaction(transaction, source, metadata, session)
+    return TransactionSchema.model_validate(transaction)
