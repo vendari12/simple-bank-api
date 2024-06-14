@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from fastapi_jwt import JwtAccessBearer
 from pydantic import EmailStr
-from server.config.settings import get_settings
+from server.config.settings import settings
 from server.models.user import ContactDetails, User, UserRole, UserToken
 from server.schemas.user import (CreateUserContactDetailSchema,
                                  CreateUserSchema, LoginUserResponseSchema,

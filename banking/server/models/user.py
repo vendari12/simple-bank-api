@@ -5,7 +5,7 @@ from typing import List, Optional
 import pyotp
 from faker import Faker
 from passlib.hash import bcrypt
-from server.config.settings import get_settings
+from server.config.settings import settings
 from server.utils.constants import DEFAULT_CASCADE_MODE
 from server.utils.db import BaseModel, IntegrityError, split_name
 from server.utils.files import BASE_PATH, load_template

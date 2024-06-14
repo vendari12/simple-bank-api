@@ -1,4 +1,4 @@
 from fastapi_jwt import JwtAccessBearer, JwtAuthorizationCredentials
-from server.config.settings import get_settings
+from server.config.settings import settings
 
-access_security = JwtAccessBearer(secret_key=get_settings().SECRET_KEY, auto_error=True)
+access_security = JwtAccessBearer(secret_key=settings.SECRET_KEY, auto_error=True)

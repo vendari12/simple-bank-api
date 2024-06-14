@@ -1,13 +1,16 @@
-from unittest.mock import AsyncMock, patch
 import asyncio
+from unittest.mock import AsyncMock, patch
+
 import pytest
-from server.controllers.transactions import (process_transaction_in_background,
-                                             schedule_transaction, BadRequest, Account)
+from server.controllers.transactions import (Account, BadRequest,
+                                             process_transaction_in_background,
+                                             schedule_transaction)
 from server.utils.queues import process_tasks, task_queue
 from server.utils.strategies import (CreditTransaction, TransactionFactory,
                                      TransactionStatus, TransactionType,
                                      TransferTransaction,
                                      WithdrawalTransaction)
+
 
 @pytest.mark.asyncio
 @patch("server.utils.cache.RedisLock", AsyncMock())

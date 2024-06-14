@@ -18,10 +18,7 @@ from server.utils.strategies import TransactionFactory
 from server.utils.transactions import generate_transaction_code
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .accounts import (
-    _get_user_account_by_number,
-    _get_account_by_number,
-)
+from .accounts import _get_account_by_number, _get_user_account_by_number
 
 logger = logging.getLogger(__name__)
 
@@ -216,10 +213,9 @@ def schedule_transaction(
     transaction: Transaction, account: Account, metadata: Dict, session: AsyncSession
 ):
     """Schedules the transaction to be processed asynchronously."""
-    task = lambda: process_transaction_in_background(
-        transaction, account, metadata, session
+    enqueue_task(
+        process_transaction_in_background, transaction, account, metadata, session
     )
-    enqueue_task(task)
 
 
 async def initiate_transaction(
@@ -239,7 +235,7 @@ async def initiate_transaction(
             destination_account.number if destination_account else destination_account
         ),
         "bank": _BANK_NAME,
-        "tax": payload.tax
+        "tax": payload.tax,
     }
     transaction_payload = CreateTransactionSchema(
         amount=payload.amount + payload.tax,

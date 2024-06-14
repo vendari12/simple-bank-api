@@ -1,7 +1,7 @@
 from http import HTTPStatus
 
 from fastapi import APIRouter, Depends
-from server.config.settings import get_settings
+from server.config.settings import settings
 from server.controllers.user import (authenticate_user, create_user,
                                      map_user_auth_claims)
 from server.schemas.user import (CreateUserSchema, LoginUserResponseSchema,

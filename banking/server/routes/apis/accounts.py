@@ -1,18 +1,13 @@
 from http import HTTPStatus
+
 from fastapi import APIRouter, Depends, Security
-from server.schemas.accounts import (
-    OpenAccountSchema,
-    UserAccountSchema,
-    ListUserAccountSchema,
-    QueryAccountFilter,
-)
-from server.controllers.accounts import (
-    get_user_accounts,
-    fetch_user_account_details_by_number,
-    create_user_account,
-)
-from server.utils.jwt import access_security, JwtAuthorizationCredentials
-from server.utils.db import get_session, AsyncSession
+from server.controllers.accounts import (create_user_account,
+                                         fetch_user_account_details_by_number,
+                                         get_user_accounts)
+from server.schemas.accounts import (ListUserAccountSchema, OpenAccountSchema,
+                                     QueryAccountFilter, UserAccountSchema)
+from server.utils.db import AsyncSession, get_session
+from server.utils.jwt import JwtAuthorizationCredentials, access_security
 
 accounts = APIRouter()
 

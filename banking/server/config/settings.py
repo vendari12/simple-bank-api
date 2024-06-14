@@ -1,7 +1,5 @@
-from datetime import datetime, timedelta
-from functools import lru_cache
-from typing import List, Optional, Union
-
+from typing import List, Union
+from threading import Lock
 from pydantic import AnyHttpUrl, field_validator
 from pydantic_settings import BaseSettings
 
@@ -31,18 +29,24 @@ class Settings(BaseSettings):
         elif isinstance(v, (list, str)):
             return v
 
+class SettingsManager:
+    _lock: Lock = Lock()
+    _settings: Settings = Settings()
 
-_client: Optional[Settings] = None
+    @classmethod
+    def get_settings(cls) -> Settings:
+        """Get a shared BaseSettings settings instance.
+        
+        Initializes the settings if it hasn't been created yet.
+        
+        Returns:
+            settings: The shared settings settings instance.
+        """
+        if cls._settings is None:
+            with cls._lock:
+                if cls._settings is None:
+                    cls._settings = Settings() 
+        return cls._settings
 
 
-@lru_cache()
-def get_settings() -> Settings:
-    """Get a shared settings client instance."""
-    global _client
-    if _client:
-        return _client
-    _client = Settings()
-    return _client
-
-
-settings = get_settings()
+settings = SettingsManager.get_settings()

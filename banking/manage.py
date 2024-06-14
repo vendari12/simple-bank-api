@@ -5,22 +5,23 @@ import typer
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.gzip import GZipMiddleware
-from server.config.settings import get_settings
+from server.config.settings import settings
 from server.models.user import User
 from server.routes.router import router
+from rq import Worker, Connection
+from server.utils.queues import QueueManager
+from server.utils.cache import get_sync_redis_client
 from server.utils.constants import SERVICE_PORT
 from server.utils.db import AsyncSession, async_session, init_models
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
-from server.utils.queues import process_tasks
+
 
 @asynccontextmanager
 async def setup_db(app: FastAPI):
     await init_models()
     yield
 
-
-settings = get_settings()
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -70,13 +71,17 @@ def load_default_users():
             await User.load_default_users(session)
 
     loop.run_until_complete(get_session())
-    
+
+
 
 @cli.command()
 def run_task_queue():
-    loop = asyncio.get_event_loop()
-
-    loop.run_until_complete(process_tasks())
+    # Define the list of queues to listen to
+    listen = ["default"]
+    queue = QueueManager.get_queue()
+    with Connection(get_sync_redis_client()):
+        worker = Worker(map(queue, listen))
+        worker.work()
 
 
 if __name__ == "__main__":

@@ -8,12 +8,8 @@ from fastapi_jwt import JwtAuthorizationCredentials
 from fastapi_jwt.jwt import JwtAccess, JwtAuthorizationCredentials
 from httpx import AsyncClient
 from manage import app
-from server.models.accounts import (
-    Account,
-    Transaction,
-    TransactionStatus,
-    TransactionType,
-)
+from server.models.accounts import (Account, Transaction, TransactionStatus,
+                                    TransactionType)
 from server.models.enums import UserRole
 from server.models.user import ContactDetails, User
 from server.utils.constants import SERVICE_PORT

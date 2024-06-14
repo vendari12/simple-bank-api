@@ -1,9 +1,8 @@
 import logging
 import os
-from contextlib import contextmanager
 from datetime import datetime
-from typing import Callable, Dict, Generator, List, Optional, Union
-
+from typing import  Union
+from redis import Redis
 from redis.asyncio import Redis as AIORedis
 from server.utils.db import BaseModel
 
@@ -50,7 +49,7 @@ def validate_redis_ssl_connection_args():
         )
 
 
-def build_redis_client_connection_args() -> dict:
+def build_redis_queue_connection_args() -> dict:
     """Build redis connection args based on SSL config"""
     connection_args = dict(
         host=_REDIS_HOST, port=_REDIS_PORT, password=_REDIS_PASSWORD, db=_REDIS_DB
@@ -66,6 +65,24 @@ def build_redis_client_connection_args() -> dict:
         )
     return connection_args
 
+def get_redis_client(**kwargs) -> AIORedis:
+    if kwargs:
+        client = AIORedis(**kwargs)
+    else:
+        client = AIORedis(**build_redis_queue_connection_args())
+    return client
+
+def get_sync_redis_client(**kwargs) -> Redis:
+    if kwargs:
+        client = Redis(**kwargs)
+    else:
+        client = Redis(**build_redis_queue_connection_args())
+    return client
+
+
+
+
+
 
 class RedisLock:
     def __init__(self, redis: AIORedis, key: str, lock_timeout: int = 30):
@@ -73,7 +90,7 @@ class RedisLock:
         Initialize the RedisLock.
 
         Args:
-            redis (AIORedis): The async Redis client.
+            redis (AIORedis): The async Redis queue.
             key (str): The lock key.
             lock_timeout (int): The lock's expiration time in seconds.
         """
@@ -119,11 +136,3 @@ class RedisLock:
         Context manager exit.
         """
         await self.release()
-
-
-def get_redis_client(**kwargs) -> AIORedis:
-    if kwargs:
-        client = AIORedis(**kwargs)
-    else:
-        client = AIORedis(**build_redis_client_connection_args())
-    return client
